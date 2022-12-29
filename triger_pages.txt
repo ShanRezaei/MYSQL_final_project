@@ -1,0 +1,364 @@
+# Trigers prosedures.
+
+---------------------------------------------------------------------------------------
+
+# students table
+
+
+
+#Create Insert trigger for validation of dob and email
+
+DELIMITER |
+CREATE TRIGGER verifydob BEFORE INSERT ON students FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+INSERT INTO students (                       ) VALUES (                                      )|
+
+
+
+
+DELIMITER |
+CREATE TRIGGER verifyemail BEFORE INSERT ON students FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+INSERT INTO students (                                  ) VALUES (                                     )|
+
+
+
+
+
+
+
+
+
+
+#Create Update trigger
+
+
+DELIMITER |
+CREATE TRIGGER verifydob_update  BEFORE UPDATE ON students FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+UPDATE students SET sex = 'X' WHERE id = 1 |
+
+
+
+
+DELIMITER |
+CREATE TRIGGER verifyemail_update  BEFORE UPDATE ON students FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+UPDATE students SET sex = 'X' WHERE id = 1 |
+
+
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Class_rooms
+
+
+#Create Insert trigger for validation of capacity 
+
+DELIMITER |
+CREATE TRIGGER verifycapacity BEFORE INSERT ON Class_rooms FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+INSERT INTO Class_rooms (                       ) VALUES (                                      )|
+
+
+
+
+#Create Update trigger
+
+
+DELIMITER |
+CREATE TRIGGER verifycapacity_update  BEFORE UPDATE ON Class_rooms FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+UPDATE Class_rooms SET sex = 'X' WHERE id = 1 |
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+#  Student_invoice 
+
+#Create Insert trigger for validation of status
+
+DELIMITER |
+CREATE TRIGGER verifystatus BEFORE INSERT ON Student_invoice  FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+INSERT INTO Student_invoice  (                       ) VALUES (                                      )|
+
+
+
+
+#Create Update trigger
+
+
+DELIMITER |
+CREATE TRIGGER verifystatus_update  BEFORE UPDATE ON Student_invoice  FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+UPDATE Student_invoice SET sex = 'X' WHERE id = 1 |
+
+
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+#  Programs table
+
+
+
+#Create Insert trigger for validation of duration and next_start_date
+
+DELIMITER |
+CREATE TRIGGER verifyduration  BEFORE INSERT ON Programs FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+INSERT INTO Programs (                       ) VALUES (                                      )|
+
+
+
+
+DELIMITER |
+CREATE TRIGGER verifynext_start_date  BEFORE INSERT ON Programs FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+INSERT INTO Programs (                                  ) VALUES (                                     )|
+
+
+
+
+
+
+
+
+
+
+#Create Update trigger
+
+
+DELIMITER |
+CREATE TRIGGER verifyduration_update  BEFORE UPDATE ON Programs FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+UPDATE Programs SET sex = 'X' WHERE id = 1 |
+
+
+
+
+DELIMITER |
+CREATE TRIGGER verifynext_start_date_update  BEFORE UPDATE ON Programs FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+UPDATE Programs SET sex = 'X' WHERE id = 1 |
+
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+# Student_profile
+
+
+
+#Create Insert trigger for validation of student_id and program_id
+
+DELIMITER |
+CREATE TRIGGER verifystudent_id  BEFORE INSERT ON Student_profile FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+INSERT INTO Student_profile (                       ) VALUES (                                      )|
+
+
+
+
+DELIMITER |
+CREATE TRIGGER verifyprogram_id  BEFORE INSERT ON Student_profile FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+INSERT INTO Student_profile (                                  ) VALUES (                                     )|
+
+
+
+
+
+
+
+
+
+
+#Create Update trigger
+
+
+DELIMITER |
+CREATE TRIGGER verifystudent_id  BEFORE UPDATE ON Student_profile FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+UPDATE Student_profile SET sex = 'X' WHERE id = 1 |
+
+
+
+
+DELIMITER |
+CREATE TRIGGER verifyprogram_id_update  BEFORE UPDATE ON Student_profile FOR EACH ROW
+BEGIN
+  IF NEW.sex IS NOT NULL AND NEW.sex != 'M' AND NEW.sex != 'F' THEN
+    SET NEW.sex = NULL;
+  END IF;
+END |
+
+UPDATE Student_profile SET sex = 'X' WHERE id = 1 |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

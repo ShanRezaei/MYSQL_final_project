@@ -1,0 +1,1253 @@
+
+
+
+--Name: Shabnam Rezaei
+--Date :2022-10-12
+--Project Student Management
+
+
+DROP DATABASE IF EXISTS Herzing_College_Student_Management;
+CREATE DATABASE Herzing_College_Student_Management;
+
+USE Herzing_College_Student_Management;
+
+-- please run this line, I created my foreign keys during the creation of the tables
+SET foreign_key_checks = 0; 
+
+
+
+# Create the students table
+DROP TABLE IF EXISTS students;
+CREATE TABLE students(
+id INT(11) UNSIGNED AUTO_INCREMENT NOT NULL,
+First_name VARCHAR(50) NOT NULL,
+Last_name VARCHAR(50) NOT NULL,
+dob DATETIME NOT NULL,
+Address VARCHAR(200) NOT NULL,
+Email VARCHAR(200) ,
+Phone INT(11) UNSIGNED,
+status VARCHAR(50) NOT NULL,
+program_name_registered  VARCHAR(50) ,
+PRIMARY KEY(id)
+) ENGINE = InnoDB;
+
+
+# Create the Class_rooms table
+DROP TABLE IF EXISTS Class_rooms;
+CREATE TABLE Class_rooms(
+id INT(11) UNSIGNED AUTO_INCREMENT NOT NULL,
+room_number INT(11) UNSIGNED,
+capacity INT(11) UNSIGNED,
+remain_capacity  INT(11) UNSIGNED,
+class_status VARCHAR(50) DEFAULT 'available',
+PRIMARY KEY(id)
+) ENGINE = InnoDB;
+
+
+
+# Create the Student_invoice table
+DROP TABLE IF EXISTS Student_invoice;
+CREATE TABLE Student_invoice(
+id INT(11) UNSIGNED AUTO_INCREMENT NOT NULL,
+student_id  INT UNSIGNED NOT NULL,
+balance INT(11) NOT NULL,
+status VARCHAR(50) NOT NULL,
+PRIMARY KEY(id),
+FOREIGN KEY (student_id) REFERENCES students(id)
+) ENGINE = InnoDB;
+
+
+
+
+# Create the Programs table
+DROP TABLE IF EXISTS Programs;
+CREATE TABLE Programs(
+id INT(11) UNSIGNED AUTO_INCREMENT NOT NULL,
+Program_names VARCHAR(100) NOT NULL,
+duration VARCHAR(50),
+cost INT(11),
+next_start_date DATETIME NOT NULL,
+class_room_id INT UNSIGNED ,
+class_room_status VARCHAR(50),
+registered_number INT(11) ,
+max_registered_number   INT(11),
+PRIMARY KEY(id)
+
+) ENGINE = InnoDB;
+
+
+
+
+# Create the Student_profile table
+DROP TABLE IF EXISTS Student_profile;
+CREATE TABLE Student_profile(
+id INT(11) UNSIGNED AUTO_INCREMENT NOT NULL,
+student_id  INT UNSIGNED NOT NULL,
+program_name_reg  VARCHAR(50),
+enrolment_date DATETIME NOT NULL,
+PRIMARY KEY(id)
+
+) ENGINE = InnoDB;
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# STUDENTS
+
+# ADD_Procedure a student 
+
+DROP PROCEDURE IF EXISTS add_student_new;
+DELIMITER |
+CREATE PROCEDURE add_student_new(IN s_First_name VARCHAR(50), IN s_Last_name VARCHAR(50),IN s_dob DATETIME,IN s_Address VARCHAR(200),IN s_Email VARCHAR(200) ,
+IN s_Phone INT(11),IN s_status VARCHAR(50),s_program_name_registered  VARCHAR(50) )
+BEGIN
+	
+    # declare instanced variables 
+	DECLARE var_firstname VARCHAR(50);
+	DECLARE var_lastname VARCHAR(50) ;
+	DECLARE var_dob DATETIME;
+                DECLARE var_address VARCHAR(200);
+	DECLARE var_email VARCHAR(200);
+	DECLARE var_phone INT(11);
+	DECLARE var_status VARCHAR(50);
+	DECLARE var_program_name_registered VARCHAR(50);
+                DECLARE var_num_pro INT(11);
+                DECLARE var_num_room INT(11);
+
+
+
+   # set instanced variables to student input
+	SET var_firstname = s_First_name;
+	SET var_lastname = s_Last_name;
+	SET var_dob = s_dob;
+                SET var_address=s_Address ;
+	SET var_email= s_Email;
+	SET var_phone=s_Phone ;
+	SET var_status= s_status;
+	SET var_program_name_registered= s_program_name_registered;
+                SET  var_num_pro=(SELECT registered_number FROM programs WHERE program_names=var_program_name_registered );
+                SET var_num_room =(SELECT remain_capacity FROM class_rooms where capacity = (SELECT max_registered_number FROM programs WHERE program_names=var_program_name_registered ));
+
+
+    
+   # inserting values and setting status to active
+
+              IF var_program_name_registered  NOT IN (SELECT program_names FROM programs) OR 
+                  var_num_pro=(SELECT capacity FROM class_rooms WHERE  id =(SELECT class_room_id  FROM programs WHERE                       program_names=var_program_name_registered ))
+THEN 
+                     SELECT "Invalid program or full capacity" AS "error";
+ELSE
+                       
+
+    INSERT INTO students (First_name, Last_name, dob, Address,Email,Phone,status,program_name_registered) 
+    VALUES (var_firstname, var_lastname, var_dob,var_address,var_email,var_phone,var_status,var_program_name_registered);
+
+  INSERT INTO student_invoice (student_id,balance,status) VALUES((SELECT MAX( id)  FROM students ),(SELECT cost FROM programs WHERE       program_names=var_program_name_registered ),var_status);
+
+   INSERT INTO student_profile(student_id,program_name_reg,enrolment_date) VALUES ((SELECT MAX(id)  FROM students),var_program_name_registered, (SELECT next_start_date FROM programs WHERE program_names=var_program_name_registered ));
+
+   UPDATE  programs SET registered_number=var_num_pro+1 WHERE program_names=var_program_name_registered  ;
+   UPDATE class_rooms SET remain_capacity=var_num_room-1 WHERE capacity =(SELECT max_registered_number FROM programs WHERE program_names=var_program_name_registered ) ;
+
+END IF;
+END |
+DELIMITER ;
+
+
+CALL add_student_new('Lucy', 'Bernes', '1990-02-01 00:00:00','420 rue drummond','lucy@yahoo.com','512638','Active');
+
+
+
+
+# search for single student
+DROP PROCEDURE IF EXISTS search_student;
+DELIMITER |
+CREATE PROCEDURE search_student(IN s_id INT(11))
+BEGIN
+
+# checks if studentd exists 
+	IF((SELECT First_name FROM students WHERE id = s_id) IS NOT NULL) THEN
+		SELECT *
+		FROM students
+		WHERE id = s_id;
+	ELSE
+		SELECT 'STUDENT does not exists .';
+	END IF;
+	
+END |
+DELIMITER ;
+CALL search_student(1); 
+CALL search_student(3); -- does not exist
+
+
+
+
+
+# search for all students
+DROP PROCEDURE IF EXISTS search_all_students;
+DELIMITER |
+CREATE PROCEDURE search_all_students()
+BEGIN
+	SELECT *
+    FROM students
+    ORDER BY First_name;
+END | 
+DELIMITER ;
+CALL search_all_students();
+
+
+
+
+# updates student from students table
+DROP PROCEDURE IF EXISTS update_student_new;
+DELIMITER |
+CREATE PROCEDURE update_student_new(IN s_id INT,IN s_Address VARCHAR(200),IN s_Email VARCHAR(200) ,
+IN s_Phone INT(11),IN s_status VARCHAR(50),s_program_name_registered  VARCHAR(50) )
+BEGIN 
+	
+    	
+                DECLARE var_address VARCHAR(200);
+	DECLARE var_email VARCHAR(200);
+	DECLARE var_phone INT(11);
+	DECLARE var_status VARCHAR(50);
+	DECLARE var_id INT DEFAULT 0;	
+               DECLARE result TEXT; 
+	DECLARE var_num_pro INT(11);  
+              DECLARE var_num_room INT(11);
+             DECLARE var_program_name_registered VARCHAR(50);
+
+    # set instanced variables to student input
+	
+                SET var_address=s_Address ;
+	SET var_email= s_Email;
+	SET var_phone=s_Phone ;
+	SET var_status= s_status;
+	SET var_id = s_id;
+    	SET var_program_name_registered= s_program_name_registered;
+                SET  var_num_pro=(SELECT registered_number FROM programs WHERE program_names=var_program_name_registered );
+                SET var_num_room =(SELECT remain_capacity FROM class_rooms where capacity = (SELECT max_registered_number FROM programs WHERE program_names=var_program_name_registered ));
+
+    # checks to see if student exists and enters correct information
+
+                     IF(var_id = (SELECT id FROM students WHERE id = var_id)) THEN
+
+
+	
+       		 IF(var_address NOT LIKE (SELECT students.Address FROM students WHERE id = var_id)) THEN
+			UPDATE students SET students.Address = var_address WHERE id = var_id;
+			SET result = 'UPDATE is done.';
+        		END IF;
+
+		IF(var_status NOT LIKE (SELECT students.status FROM students WHERE id = var_id)) THEN
+			
+                                               
+                                     IF var_status ='suspended' THEN 
+                                       UPDATE students SET students.status = var_status WHERE id = var_id;
+                                       UPDATE programs SET registered_number  =  var_num_pro+1 WHERE program_names=var_program_name_registered  ;
+		       UPDATE class_rooms SET remain_capacity = var_num_room-1 WHERE capacity =(SELECT max_registered_number FROM programs WHERE program_names=var_program_name_registered ) ;
+
+		      SET result = 'UPDATE is done.';
+                                      END IF;
+                                 ELSE
+                                      UPDATE students SET students.status = var_status WHERE id = var_id;
+                                       SET result = 'UPDATE is done.';
+
+
+
+        		END IF;
+
+		IF(var_email NOT LIKE (SELECT students.Email FROM students WHERE id = var_id)) THEN
+			UPDATE students SET students.Email = var_email WHERE id = var_id;
+			SET result = 'UPDATE is done.';
+        		END IF;
+		IF(var_phone NOT LIKE (SELECT students.Phone FROM students WHERE id = var_id)) THEN
+			UPDATE students SET students.Phone = var_phone WHERE id = var_id;
+			SET result = 'UPDATE is done.';
+        		END IF;
+
+
+
+
+
+
+
+             ELSE 
+                
+       	SET result = 'STUDENT does not exists .';
+
+            END IF;
+    
+    # Displays the student update results
+    SELECT result AS 'Update results';
+    
+END |
+DELIMITER ;
+CALL update_student_new(                      );
+
+
+
+
+
+
+# deletes a student permanently
+DROP PROCEDURE IF EXISTS deallocate_student;
+DELIMITER |
+CREATE PROCEDURE deallocate_student(IN s_First_name VARCHAR(50), IN s_Last_name VARCHAR(50),IN s_dob DATETIME)
+BEGIN
+
+# declaring instance variable
+    DECLARE var_firstname VARCHAR(50);
+    DECLARE var_lastname VARCHAR(50) ;
+    DECLARE var_dob DATETIME;
+    DECLARE var_id INT;
+    DECLARE result TEXT;
+   
+    # setting instance variables
+	SET var_firstname = s_First_name;
+	SET var_lastname = s_Last_name;
+	SET var_dob = s_dob;
+
+    
+    # stores student id into instanced variable
+    SELECT id INTO var_id
+    FROM students
+    WHERE students.First_name LIKE var_firstname AND students.Last_name LIKE var_lastname  AND  students.dob  LIKE var_dob ;
+	
+    # permanently removing student from the students table
+    IF (var_id = (SELECT id FROM students WHERE students.First_name LIKE var_firstname AND students.Last_name LIKE var_lastname  AND  students.dob  LIKE var_dob)) THEN
+		DELETE FROM students WHERE First_name = var_firstname AND Last_name = var_lastname  AND  dob = var_dob;
+        SET result  = CONCAT(var_firstname,var_lastname, ' has been successfully deleted!');
+	ELSE
+		SET result  = ' OOPS! Something went wrong, please try again.';
+    END IF;
+    
+    # displays final result of delete procedure
+    SELECT result AS 'Deallocation result';
+
+END |
+DELIMITER ;
+CALL deallocate_student(                                 );
+
+
+
+
+
+
+
+
+
+
+**************************************
+
+
+
+
+
+
+#Create Insert trigger for validation of dob and email
+
+DROP TRIGGER  IF EXISTS verifydob_student1 ;
+
+DELIMITER |
+CREATE TRIGGER verifydob_student1 BEFORE INSERT ON students FOR EACH ROW BEGIN
+DECLARE result TEXT;
+ IF NEW.dob > '2012-01-01 00:00:00' THEN 
+ SET NEW.dob = NULL;
+END IF; 
+END|
+DELIMITER ;
+ 
+CALL add_student('shery', 'kernes', '2020-02-01 00:00:00','580 rue ellen','shery@yahoo.com','51662638','Active');
+
+
+
+
+DROP TRIGGER  IF EXISTS verifyemail 
+DELIMITER |
+CREATE TRIGGER verifyemail BEFORE INSERT ON students FOR EACH ROW
+BEGIN
+
+DECLARE result TEXT;
+  IF NEW.email IS NOT NULL AND NEW.email  NOT LIKE '%@%.%' THEN
+    SET NEW.email = ' wrong email format';
+  END IF;
+
+
+END |
+DELIMITER ;
+
+INSERT INTO students (                                  ) VALUES (                                     )|
+
+
+
+
+
+
+
+
+#Create Update trigger
+
+DROP TRIGGER  IF EXISTS verifydob_update
+DELIMITER |
+CREATE TRIGGER verifydob_update  BEFORE UPDATE ON students FOR EACH ROW
+BEGIN
+DECLARE result TEXT;
+  IF NEW.dob > '2012-01-01 00:00:00' THEN 
+SET NEW.dob = NULL; 
+END IF; 
+END |
+
+UPDATE students SET                          |
+
+
+
+DROP TRIGGER  IF EXISTS verifyemail_update 
+DELIMITER |
+CREATE TRIGGER verifyemail_update  BEFORE UPDATE ON students FOR EACH ROW
+BEGIN
+ DECLARE result TEXT;
+  IF NEW.email IS NOT NULL AND NEW.email  NOT LIKE '%@%.%' THEN
+    SET NEW.email = ' wrong email format';
+  END IF;
+END |
+DELIMITER ;
+
+UPDATE students  SET                           |
+
+
+
+
+===========================================================================================
+
+
+# CLASS_ROOMS
+
+# ADD_Procedure class_room 
+
+DROP PROCEDURE IF EXISTS add_class_rooms;
+DELIMITER |
+CREATE PROCEDURE  add_class_rooms(IN r_room_number INT(11), IN r_capacity INT(11),IN r_remain_capacity INT,IN r_class_status VARCHAR(50) )
+BEGIN
+	
+    # declare instanced variables 
+	DECLARE var_room_number INT(11);
+	DECLARE var_capacity INT(11) ;
+DECLARE var_remain_capacity INT(11) ;	
+DECLARE var_class_status VARCHAR(50) ;	
+
+
+   # set instanced variables to class_rooms input
+	SET var_room_number = r_room_number;
+	SET var_capacity = r_capacity ;
+	SET var_remain_capacity =r_remain_capacity;
+SET var_class_status=r_class_status;
+    
+   # inserting values
+    INSERT INTO Class_rooms (room_number, capacity,remain_capacity,class_status) 
+    VALUES (var_room_number , var_capacity,var_remain_capacity,var_class_status );
+
+END |
+DELIMITER ;
+
+
+CALL add_class_rooms(                                     );
+
+
+
+
+
+
+
+
+# updates student from students table
+DROP PROCEDURE IF EXISTS update_class_rooms;
+DELIMITER |
+CREATE PROCEDURE update_class_rooms(IN r_id INT,IN r_room_number INT(11), IN r_capacity INT(11) )
+BEGIN 
+	
+    	DECLARE var_room_number INT(11);
+	DECLARE var_capacity INT(11) ;
+	DECLARE var_id INT DEFAULT 0;	
+	DECLARE result TEXT;
+
+
+    # set instanced variables to class_rooms input
+	SET var_room_number = r_room_number;
+	SET var_capacity = r_capacity ;
+	SET var_id = r_id;
+    
+    # checks to see if class_rooms exists and enters correct information
+	IF(var_id = (SELECT id FROM Class_rooms WHERE id = var_id)) THEN
+		IF(var_room_number NOT LIKE (SELECT Class_rooms.room_number FROM Class_rooms WHERE id = var_id)) THEN
+			UPDATE Class_rooms SET Class_rooms.room_number = var_room_number WHERE id = var_id;
+			SET result= 'Update is done.';
+        		END IF;
+      		  IF(var_capacity NOT LIKE (SELECT capacity FROM Class_rooms WHERE id = var_id)) THEN
+			UPDATE Class_rooms SET Class_rooms.capacity = var_capacity WHERE id = var_id;
+			SET result= 'Update is done.';
+       		 END IF;
+       		 
+             ELSE 
+                
+       	SET result= 'Class_room does not exists .';
+
+            END IF;
+    
+    # Displays the Class_room update results
+    SELECT result AS 'Update results';
+    
+END |
+DELIMITER ;
+CALL update_class_rooms(                      );
+
+
+
+
+
+
+
+# deletes a class_room permanently
+DROP PROCEDURE IF EXISTS deallocate_class_room_new;
+DELIMITER |
+CREATE PROCEDURE deallocate_class_room_new(IN r_room_number INT(11))
+BEGIN
+
+# declaring instance variable
+    DECLARE var_room_number INT(11);
+    DECLARE var_id INT;
+    DECLARE result TEXT;
+DECLARE cap_program INT(11);
+DECLARE prog_name VARCHAR(50);
+   
+# setting instance variables
+    SET var_room_number = r_room_number;
+	
+	
+ # stores class_room id into instanced variable
+    SELECT id INTO var_id
+    FROM Class_rooms
+    WHERE Class_rooms.room_number LIKE var_room_number  ;
+
+SELECT max_registered_number INTO  cap_program 
+FROM programs 
+WHERE class_room_id=var_room_number;
+
+
+SELECT program_names INTO prog_name FROM programs 
+WHERE class_room_id=var_room_number;
+
+	
+    # permanently removing Class_rooms from the Class_rooms table
+    IF (var_id = (SELECT id FROM Class_rooms WHERE Class_rooms.room_number LIKE var_room_number  )) THEN
+		DELETE FROM Class_rooms WHERE room_number = var_room_number ;
+        SET result  = CONCAT(var_room_number, ' has been successfully deleted! and program is updated.');
+
+
+      UPDATE programs  SET programs.class_room_id = (SELECT MIN(id) FROM class_rooms WHERE class_status = 'available' AND capacity >=
+  cap_program)  WHERE  programs.class_room_id=var_room_number ;
+
+UPDATE class_rooms SET class_status='occupied' WHERE room_number =(SELECT class_room_id FROM programs WHERE program_names=prog_name);
+
+
+	ELSE
+		SET result  = ' OOPS! Something went wrong, please try again.';
+    END IF;
+    
+    # displays final result of delete procedure
+    SELECT result AS 'Deallocation result';
+
+END |
+DELIMITER ;
+CALL deallocate_class_room_new(                                 );
+
+
+
+
+
+********************************************************************************
+
+#Create Insert trigger for validation of capacity 
+
+DELIMITER |
+CREATE TRIGGER verifycapacity1 BEFORE INSERT ON Class_rooms FOR EACH ROW
+BEGIN
+  DECLARE result TEXT;
+  IF NEW.capacity IS NOT NULL AND  NEW.capacity > 20 THEN
+     
+    SET NEW.capacity = 0;
+
+  END IF;
+END |
+DELIMITER ;
+
+INSERT INTO Class_rooms (                       ) VALUES (                                      )|
+
+
+
+
+#Create Update trigger
+
+
+DELIMITER |
+CREATE TRIGGER verifycapacity_update1  BEFORE UPDATE ON Class_rooms FOR EACH ROW
+BEGIN
+  DECLARE result TEXT;
+  IF NEW.capacity IS NOT NULL AND  NEW.capacity > 20 THEN
+     
+     SET NEW.capacity = 0;
+
+  END IF;
+END |
+DELIMITER ;
+UPDATE Class_rooms SET         WHERE              |
+
+
+
+
+
+
+
+=======================================================================================
+# Student_invoice 
+
+
+
+
+
+DROP PROCEDURE IF EXISTS add_Student_invoice;
+DELIMITER |
+CREATE PROCEDURE  add_Student_invoice(IN i_student_id INT,IN i_balance INT, IN i_status VARCHAR(50))
+BEGIN
+	
+ # declared variables
+    DECLARE var_student_id INT ;
+   DECLARE var_balance INT ;
+    DECLARE var_status VARCHAR(50);
+    DECLARE result TEXT;
+    
+ # set instanced variables to IN para
+    SET var_student_id =  i_student_id;
+   SET var_balance = i_balance;
+    SET var_status = i_status;
+    
+ # check if student id exists, if so adds a new invoice respectively
+    IF(var_student_id = (SELECT id  FROM students WHERE  id = var_student_id))THEN
+		SET result =  CONCAT('invoice successfully added for student number ', var_student_id);
+        INSERT INTO Student_invoice (student_id, balance, status) 
+       VALUES (var_student_id, var_balance, var_status);
+	ELSE
+		SET result = "The invoice you're trying to add cannot be added due to unknown student";
+	END IF;
+    
+    SELECT result AS 'Invoice result';
+    
+END |
+DELIMITER ;
+
+CALL add_Student_invoice(              );
+
+
+
+
+# search for a single invoice by ID
+DROP PROCEDURE IF EXISTS search_invoice;
+DELIMITER |
+ CREATE PROCEDURE search_invoice(IN i_id INT(11))
+ BEGIN 
+	DECLARE result TEXT;
+	IF((SELECT student_id  FROM student_invoice WHERE id = i_id) IS NOT NULL) THEN
+		SELECT *
+		FROM student_invoice
+		WHERE id = i_id;
+	ELSE
+		SELECT 'invoice does not exists .';
+	END IF;
+	
+
+
+ END |
+ DELIMITER ;
+ CALL search_invoice(   );
+
+
+
+SET var_old_balance=(select balance FROM  Student_invoice WHERE  id = var_id);
+
+
+# updates invoice
+DROP PROCEDURE IF EXISTS update_invoice_neww;
+DELIMITER |
+CREATE PROCEDURE update_invoice_neww(IN i_student_id INT,IN pay_balance INT)
+BEGIN
+
+  # declare instance variables
+    
+    DECLARE var_balance INT(11);
+    DECLARE var_student_id INT;
+    DECLARE result TEXT;
+   DECLARE var_pay INT(11);
+
+
+    # sets instanced variables
+    
+    SET var_balance=(SELECT balance FROM student_invoice where student_id=var_student_id);
+    SET var_student_id  =  i_student_id;
+SET var_pay=pay_balance;
+
+    
+    # checks if student exist, if so updates information respectively
+    IF (var_student_id  != (SELECT id  FROM  Students where id=var_student_id ) ) THEN
+		SET result = 'invoice does not exist';
+	ELSE
+              
+                              IF var_pay> var_balance THEN 
+                                SET result= CONCAT(var_pay -var_balance,"should be return");
+                            ELSE 
+		 UPDATE Student_invoice SET  balance=balance-pay_balance 
+                                 WHERE Student_invoice.student_id= var_student_id;
+         SET result = CONCAT('You have updated the balance on the account of the student with invoice id number ', var_student_id, ' successfully!');
+	END IF;
+END IF;
+   SELECT result AS 'Invoice result';
+   
+END |
+DELIMITER ;
+CALL update_invoice_neww(               );
+ 
+
+
+
+
+# Permanently deletes invoice
+DROP PROCEDURE IF EXISTS deallocate_invoice;
+DELIMITER |
+CREATE PROCEDURE deallocate_invoice(IN i_id INT(11))
+BEGIN
+	
+    # declare instance variables
+    DECLARE var_id INT;
+    DECLARE result TEXT;
+    
+    # set instanced variables
+    SET var_id = i_id;
+    
+    # checks if id exists in the invoice table, if so deletes the chosen row
+    IF(var_id = (SELECT Student_invoice.id FROM Student_invoice WHERE Student_invoice.id = var_id))THEN
+		DELETE FROM Student_invoice WHERE Student_invoice.id = var_id;
+        SET result = CONCAT('Invoice number ', var_id ,' has been deleted successfully!');
+	ELSE
+        SET result = 'id does not exist and therefore cannot be deleted';
+	END IF;
+    
+    # displays whether id was found or not
+    SELECT result AS 'Deallocation result';
+
+END |
+DELIMITER ;
+CALL deallocate_invoice(               );
+
+
+
+
+--  find invoice by id number
+DROP PROCEDURE IF EXISTS find_invoice_by_student_number;
+DELIMITER |
+CREATE PROCEDURE find_invoice_by_student_number(i_student_id INT(11))
+BEGIN
+
+# declare instance variables
+	DECLARE var_id INT;
+                DECLARE result TEXT;
+    
+# store student id into variable
+    SET var_id = i_student_id;
+    
+# displays invoice and invoice details based on student ID
+    IF(var_id = (SELECT student_id  FROM Student_invoice )) THEN
+		SELECT * FROM Student_invoice;
+		
+	ELSE
+		SET result = 'no matches found, please try again';
+		
+    END IF;
+    SELECT result;
+END |
+DELIMITER ;
+CALL find_invoice_by_student_number(     );
+
+
+**************************************************************************************************
+
+#Create Insert trigger for validation of status
+
+DROP TRIGGER  IF EXISTS verifystatus
+DELIMITER |
+CREATE TRIGGER verifystatus BEFORE INSERT ON Student_invoice  FOR EACH ROW
+BEGIN
+
+  DECLARE result TEXT;
+  IF  NEW.status IS NOT NULL  AND  NEW.status != 'Active'  AND  NEW.status != 'Graduated'   AND  NEW.status != 'Suspended'  THEN
+     
+     SET NEW.status = ' OOPS! Something went wrong, please try again.'; 
+
+  END IF;
+END |
+DELIMITER ;
+
+INSERT INTO Student_invoice  (                       ) VALUES (                                      )|
+
+
+
+
+#Create Update trigger
+
+DROP TRIGGER  IF EXISTS verifystatus_update
+DELIMITER |
+CREATE TRIGGER verifystatus_update  BEFORE UPDATE ON Student_invoice  FOR EACH ROW
+BEGIN
+  DECLARE result TEXT;
+  IF  NEW.status IS NOT NULL  AND  NEW.status != 'Active'  AND  NEW.status != 'Graduated'   AND  NEW.status != 'Suspended'  THEN
+     
+     SET NEW.status  = ' OOPS! Something went wrong, please try again.'; 
+
+  END IF;
+END |
+DELIMITER ;
+
+UPDATE Student_invoice SET             WHERE                   |
+
+
+===============================================================
+#Student_invoice_function
+
+DELIMITER $$ 
+CREATE FUNCTION Student_invoice_sum1(i_student_id INT) RETURNS INT(11)
+BEGIN
+  DECLARE number_out INT(11);
+  DECLARE id_out INT;
+  SET  id_out=i_student_id;
+
+    SELECT SUM(balance) INTO number_out
+    FROM Student_invoice
+    WHERE student_id = id_out;
+  
+    RETURN (Student_invoice_sum);
+END$$ 
+DELIMITER ;  
+
+
+CALL  Student_invoice_sum1();  
+
+
+===========================================================================================
+
+#Programs_table
+
+
+
+
+
+# add a program
+DROP PROCEDURE IF EXISTS add_program;
+DELIMITER |
+CREATE PROCEDURE add_program(IN p_Program_names VARCHAR(150), IN p_duration VARCHAR(50), IN p_cost VARCHAR(50), IN p_next_start_date DATETIME,p_class_room_id INT,IN p_class_room_status VARCHAR(50), IN p_registered_number INT, p_max_registered_number INT)
+BEGIN
+
+# declaring instance variables
+                DECLARE var_Program_name VARCHAR(50);
+	DECLARE var_duration VARCHAR(50);
+	DECLARE var_cost VARCHAR(50);
+	DECLARE var_next_start_date DATETIME;
+                DECLARE var_class_room_id INT;
+               DECLARE var_class_room_status VARCHAR(50);
+	DECLARE var_registered_number INT;
+	DECLARE var_max_registered_number INT;
+                DECLARE result TEXT;
+    
+    SET var_Program_name = p_Program_names;
+    SET var_duration = p_duration;
+    SET var_cost = p_cost;
+    SET var_next_start_date =p_next_start_date;
+    SET var_class_room_id=p_class_room_id;
+SET var_class_room_status=p_class_room_status;
+SET var_registered_number=p_registered_number;
+SET var_max_registered_number=p_max_registered_number;
+    
+    
+	INSERT INTO Programs (Program_names, duration, cost, next_start_date, class_room_id,class_room_status,registered_number,max_registered_number) VALUES (var_Program_name, var_duration, var_cost, var_next_start_date, var_class_room_id,var_class_room_status,var_registered_number,var_max_registered_number);
+
+               UPDATE class_rooms SET class_status='occupied' WHERE id = var_class_room_id,
+	SET result = CONCAT(var_Program_name,' was successfully added!');
+    
+	SELECT result AS 'Program result';
+
+END |
+DELIMITER ;
+CALL add_program('programming','15 months',20000,'2021-09-01 00:00:00',1,'ready',0,20)
+
+
+
+
+
+# updates a program
+DROP PROCEDURE IF EXISTS update_program;
+DELIMITER |
+CREATE PROCEDURE update_program(IN p_id INT, IN p_Program_names VARCHAR(150), IN p_duration VARCHAR(50), IN p_cost VARCHAR(50), IN p_next_start_date DATETIME,p_class_room_id INT)
+BEGIN
+	
+    # declaring instance variables
+
+                DECLARE var_id INT;
+                DECLARE var_Program_name VARCHAR(50);
+	DECLARE var_duration VARCHAR(50);
+	DECLARE var_cost VARCHAR(50);
+	DECLARE var_next_start_date DATETIME;
+                DECLARE var_class_room_id INT;
+                DECLARE result TEXT;
+  
+    
+    # assign instanced variables 
+    SET var_id = p_id;
+    SET var_Program_name = p_Program_names;
+    SET var_duration = p_duration;
+    SET var_cost = p_cost;
+    SET var_next_start_date =p_next_start_date;
+    SET var_class_room_id=p_class_room_id;
+    
+    
+    # checks if program exists in the program table
+    IF (var_id = (SELECT id FROM Programs WHERE id = var_id)) THEN
+		UPDATE Programs SET duration =var_duration, cost = var_cost, next_start_date = var_next_start_date, class_room_id = var_class_room_id  WHERE id LIKE var_id;
+		SET result = CONCAT('ID number ', var_id, ' has been successfully updated!');
+    ELSE
+		SET result = 'The id you provided does not exists.';
+	END IF;
+    
+    # displays the results
+    SELECT result AS 'Update program result';
+    
+END |
+DELIMITER ;
+CALL update_program(  );
+
+
+
+
+# deletes program from the programs table
+DROP PROCEDURE IF EXISTS deallocate_program;
+DELIMITER |
+CREATE PROCEDURE deallocate_program(IN p_id INT)
+BEGIN
+
+    DECLARE var_id INT;
+    DECLARE result TEXT;
+    DECLARE var_Program_name TEXT;
+    
+    SET var_id = p_id;
+    SET var_Program_name = (SELECT Program_names FROM Programs WHERE id = var_id);
+    
+    IF (var_id = (SELECT id FROM Programs WHERE id = var_id)) THEN
+		DELETE FROM Programs  WHERE id = var_id;
+        SET result = CONCAT('ID number ', var_id, ' named ', var_Program_name , ' has been sucessfully deleted.');
+	ELSE 
+		SET result = 'no matches were found.';
+	END IF;
+    
+    SELECT result AS 'Delete row results';
+
+END |
+DELIMITER ;
+CALL deallocate_program(    );
+
+
+
+*********************************************************************************************************
+
+
+#Create Insert trigger for validation of duration and next_start_date
+
+
+DROP TRIGGER  IF EXISTS verifyduration
+
+DELIMITER |
+CREATE TRIGGER verifyduration  BEFORE INSERT ON Programs FOR EACH ROW
+BEGIN
+
+DECLARE result TEXT;
+
+  IF NEW.duration IS NOT NULL AND NEW.duration NOT LIKE '15 months' AND NEW.Program_names = 'programing'  THEN 
+    SET NEW.duration  = ' OOPS! Something went wrong, please try again.';
+  END IF;
+
+ IF NEW.duration IS NOT NULL AND NEW.duration NOT LIKE '24 months' AND NEW.Program_names = 'Networking' THEN 
+    SET NEW.duration  = ' OOPS! Something went wrong, please try again.';
+  END IF;
+
+
+IF NEW.duration IS NOT NULL AND  NEW.duration NOT LIKE '12 months'  AND NEW.Program_names = 'Computer_suport' THEN 
+    SET NEW.duration  = ' OOPS! Something went wrong, please try again.';
+  END IF;
+END |
+
+DELIMITER ;
+
+INSERT INTO Programs (                       ) VALUES (                                      )|
+
+
+
+DROP TRIGGER  IF EXISTS verifynext_start_date 
+
+DELIMITER |
+CREATE TRIGGER verifynext_start_date  BEFORE INSERT ON Programs FOR EACH ROW
+BEGIN
+  DECLARE result TEXT;
+  IF NEW.next_start_date IS NOT NULL AND NEW.next_start_date != '2022-03-01 00:00:00'   THEN
+    SET NEW.next_start_date  = ' 1900-01-01 00:00:00';
+  END IF;
+
+END |
+DELIMITER ;
+INSERT INTO Programs (                                  ) VALUES (                                     )|
+
+
+
+
+#Create Update trigger
+
+DROP TRIGGER  IF EXISTS verifyduration_update
+DELIMITER |
+CREATE TRIGGER verifyduration_update  BEFORE UPDATE ON Programs FOR EACH ROW
+BEGIN
+
+DECLARE result TEXT;
+   IF NEW.duration IS NOT NULL AND NEW.duration >15 AND NEW.Program_names = 'programing'  THEN 
+    SET NEW.duration = ' OOPS! Something went wrong, please try again.';
+  END IF;
+
+ IF NEW.duration IS NOT NULL AND NEW.duration >24 AND NEW.Program_names = 'Networking' THEN 
+    SET NEW.duration  = ' OOPS! Something went wrong, please try again.';
+  END IF;
+
+
+IF NEW.duration IS NOT NULL AND  NEW.duration >12  AND NEW.Program_names = 'Computer_suport' THEN 
+    SET NEW.duration  = ' OOPS! Something went wrong, please try again.';
+  END IF;
+
+END |
+DELIMITER ;
+
+
+UPDATE Programs SET        WHERE |
+
+
+
+DROP TRIGGER  IF EXISTS verifynext_start_date_update
+DELIMITER |
+CREATE TRIGGER verifynext_start_date_update  BEFORE UPDATE ON Programs FOR EACH ROW
+BEGIN
+  DECLARE result TEXT;
+  IF NEW.next_start_date IS NOT NULL    AND NEW.next_start_date != '2022-03-01 00:00:00'  THEN
+ SET NEW.next_start_date  = ' 1900-01-01 00:00:00';
+  END IF;
+END |
+DELIMITER ;
+
+UPDATE Programs SET sex = 'X' WHERE id = 1 |
+
+
+
+
+
+
+=======================================================================================================
+#  Student_profile 
+
+
+
+
+
+
+# add a Student_profile
+DROP PROCEDURE IF EXISTS add_Student_profile;
+DELIMITER |
+CREATE PROCEDURE add_Student_profile( IN sp_program_id INT, IN sp_enrolment_date DATETIME,IN sp_student_id INT)
+BEGIN
+
+# declaring instance variables
+                
+	DECLARE var_enrolment_date DATETIME;
+                DECLARE var_program_id INT;
+                DECLARE var_student_id INT;
+                DECLARE result TEXT;
+    
+    
+    SET var_enrolment_date  = sp_enrolment_date;
+    SET var_program_id=sp_program_id;
+    SET var_student_id=sp_student_id;
+    
+    
+	INSERT INTO Student_profile (student_id,program_id, enrolment_date) VALUES (var_student_id,var_program_id,  var_enrolment_date);
+	SET result = CONCAT(var_Program_name,' was successfully added!');
+    
+	SELECT result AS 'Program result';
+
+END |
+DELIMITER ;
+CALL add_Student_profile(           );
+
+
+
+
+
+
+# updates a Student profile
+DROP PROCEDURE IF EXISTS update_Student_profile;
+DELIMITER |
+CREATE PROCEDURE update_Student_profile(IN sp_student_id INT,IN sp_program_id INT)
+BEGIN
+	
+    # declaring instance variables
+
+                DECLARE var_student_id INT;
+	DECLARE var_program_id INT;
+                DECLARE result TEXT;
+  
+    
+    # assign instanced variables 
+    SET var_student_id= sp_student_id ;
+    SET var_program_id=sp_program_id;
+    
+    
+    # checks if Student_profile exists in the Student_profile table
+    IF (var_student_id = (SELECT student_id  FROM Student_profile WHERE student_id  = var_student_id)) THEN
+		UPDATE Student_profile SET program_id =var_program_id;
+		SET result = CONCAT('ID number ', var_student_id, ' has been successfully updated!');
+    ELSE
+		SET result = 'The id you provided does not exists.';
+	END IF;
+    
+    # displays the results
+    SELECT result AS 'Update Student_profile result';
+    
+END |
+DELIMITER ;
+CALL update_Student_profile(  );
+
+
+
+
+
+
+# deletes a  profile from the a Student profile table
+DROP PROCEDURE IF EXISTS deallocate_Student_profile;
+DELIMITER |
+CREATE PROCEDURE deallocate_Student_profile(IN sp_id INT)
+BEGIN
+
+    DECLARE var_id INT;
+    DECLARE result TEXT;
+    DECLARE var_student_id INT;
+    
+    SET var_id = sp_id;
+    SET var_student_id = (SELECT student_id FROM Student_profile WHERE id = var_id);
+    
+    IF (var_id = (SELECT id FROM Student_profile WHERE id = var_id)) THEN
+		DELETE FROM Student_profile  WHERE id = var_id;
+        SET result = CONCAT('ID number ', var_id,  ' has been sucessfully deleted.');
+	ELSE 
+		SET result = 'no matches were found.';
+	END IF;
+    
+    SELECT result AS 'Delete row results';
+
+END |
+DELIMITER ;
+CALL deallocate_Student_profile(    );
+
+
+
+
+
+*******************************************************************************************************
+
+
+#Create Insert trigger for validation of student_id and program_id
+
+
+
+DROP TRIGGER  IF EXISTS verifyprogram_id
+DELIMITER |
+CREATE TRIGGER verifyprogram_id  BEFORE INSERT ON Student_profile FOR EACH ROW
+BEGIN
+ DECLARE result TEXT;
+  IF   NEW.program_id  IS NOT NULL AND  NEW.program_id != 1 AND NEW.program_id != 2  AND NEW.program_id != 3   THEN
+    SET NEW.program_id = 0;
+  END IF;
+END |
+DELIMITER ;
+
+INSERT INTO Student_profile (                                  ) VALUES (                                     )|
+
+
+
+
+
+#Create Update trigger
+
+DROP TRIGGER  IF EXISTS verifyprogram_id_update ;
+
+DELIMITER |
+CREATE TRIGGER verifyprogram_id_update  BEFORE UPDATE ON Student_profile FOR EACH ROW
+BEGIN
+  DECLARE result TEXT;
+  IF   NEW.program_id  IS NOT NULL AND  NEW.program_id != 1 AND NEW.program_id != 2  AND NEW.program_id != 3   THEN
+    SET NEW.program_id = 0;
+  END IF;
+
+END |
+DELIMITER ;
+
+
+UPDATE Student_profile SET  WHERE id = 1 |
+
+
+
+
+
+
+
+
+
+
+==========================================================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
